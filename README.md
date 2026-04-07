@@ -2,9 +2,28 @@
 
 An interactive dashboard covering all 110+ updates announced at **FabCon Atlanta 2026**, sourced directly from the [official Microsoft Fabric March 2026 Feature Summary](https://blog.fabric.microsoft.com/en-us/blog/fabric-march-2026-feature-summary).
 
-## 🔗 Live Dashboard
+## 🔗 View the Dashboard
 
 👉 **[simranjaggiva-prog.github.io/FABCON-2026-Updates-](https://simranjaggiva-prog.github.io/FABCON-2026-Updates-/)**
+
+> **First time?** GitHub Pages must be enabled before the link works.  
+> Follow the steps below to turn it on — it takes less than a minute.
+
+---
+
+## ⚡ How to Enable (One-Time Setup)
+
+1. Go to this repo on GitHub: **[github.com/simranjaggiva-prog/FABCON-2026-Updates-](https://github.com/simranjaggiva-prog/FABCON-2026-Updates-)**
+2. Click **Settings** (top menu of the repo)
+3. Scroll down to **Pages** in the left sidebar
+4. Under **Source**, select **Deploy from a branch**
+5. Set **Branch** to `main` and folder to `/ (root)`
+6. Click **Save**
+7. Wait ~60 seconds, then visit: **https://simranjaggiva-prog.github.io/FABCON-2026-Updates-/**
+
+> GitHub will show a green banner at the top of the Pages settings screen once it's live.
+
+---
 
 ## What's Inside
 
