@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FabCon 2026 — Microsoft Fabric Updates</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f2f5; color: #1a1a1a; }
+
+  /* ── HERO ── */
+  .hero {
+    background: linear-gradient(135deg, #0f6cbd 0%, #0078d4 60%, #005a9e 100%);
+    color: white; padding: 40px 32px 32px; text-align: center;
+  }
+  .hero h1 { font-size: 2.2em; margin-bottom: 8px; }
+  .hero p { opacity: .88; font-size: 1.05em; margin-bottom: 20px; }
+  .hero a { color: #ffe; text-decoration: underline; }
+
+  /* ── KPI STRIP ── */
+  .kpi-strip {
+    display: flex; gap: 14px; justify-content: center; flex-wrap: wrap;
+    padding: 0 24px 28px;
+  }
+  .kpi {
+    background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.3);
+    border-radius: 12px; padding: 14px 28px; text-align: center; cursor: pointer;
+    transition: background .2s, transform .15s;
+  }
+  .kpi:hover { background: rgba(255,255,255,.3); transform: translateY(-2px); }
+  .kpi.active { background: rgba(255,255,255,.35); outline: 2px solid #fff; }
+  .kpi .num { font-size: 2em; font-weight: 700; line-height: 1; }
+  .kpi .lbl { font-size: .8em; opacity: .85; margin-top: 3px; }
+
+  /* ── CONTROLS ── */
+  .controls {
+    display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+    max-width: 1200px; margin: 24px auto 0; padding: 0 20px;
+  }
+  .search-box {
+    flex: 1; min-width: 220px; padding: 10px 16px; border: 1.5px solid #ccc;
+    border-radius: 8px; font-size: .95em; outline: none;
+  }
+  .search-box:focus { border-color: #0f6cbd; }
+  .filter-btn {
+    padding: 9px 18px; border: 1.5px solid #ccc; border-radius: 8px;
+    background: white; cursor: pointer; font-size: .9em; transition: all .2s;
+  }
+  .filter-btn:hover { border-color: #0f6cbd; color: #0f6cbd; }
+  .filter-btn.active-ga  { background: #107c10; color: white; border-color: #107c10; }
+  .filter-btn.active-pre { background: #8764b8; color: white; border-color: #8764b8; }
+  .filter-btn.active-all { background: #0f6cbd; color: white; border-color: #0f6cbd; }
+  .result-count { font-size: .88em; color: #666; margin-left: 6px; white-space: nowrap; }
+
+  /* ── GRID ── */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px; max-width: 1200px; margin: 18px auto 40px; padding: 0 20px;
+  }
+
+  /* ── CATEGORY CARD ── */
+  .cat-card {
+    background: white; border-radius: 14px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.08); overflow: hidden;
+    transition: box-shadow .2s, transform .15s;
+  }
+  .cat-card:hover { box-shadow: 0 6px 20px rgba(0,0,0,.13); transform: translateY(-3px); }
+  .cat-header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 16px 18px; cursor: pointer; user-select: none;
+  }
+  .cat-icon { font-size: 1.6em; width: 40px; text-align: center; }
+  .cat-title { font-weight: 700; font-size: 1em; flex: 1; }
+  .cat-counts { display: flex; gap: 6px; }
+  .badge-ga  { background: #e6f4e6; color: #107c10; border: 1px solid #a8d5a8; border-radius: 20px; padding: 2px 9px; font-size: .75em; font-weight: 700; }
+  .badge-pre { background: #f0ebf8; color: #8764b8; border: 1px solid #c9b8e8; border-radius: 20px; padding: 2px 9px; font-size: .75em; font-weight: 700; }
+  .chevron { font-size: .9em; color: #888; transition: transform .25s; margin-left: 4px; }
+  .cat-card.open .chevron { transform: rotate(180deg); }
+
+  /* ── UPDATE LIST ── */
+  .update-list { display: none; border-top: 1px solid #f0f0f0; }
+  .cat-card.open .update-list { display: block; }
+  .update-item {
+    padding: 11px 18px; border-bottom: 1px solid #f5f5f5;
+    cursor: pointer; transition: background .15s;
+  }
+  .update-item:last-child { border-bottom: none; }
+  .update-item:hover { background: #f7f9ff; }
+  .update-item .item-header { display: flex; align-items: flex-start; gap: 8px; }
+  .status-dot { width: 9px; height: 9px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+  .dot-ga  { background: #107c10; }
+  .dot-pre { background: #8764b8; }
+  .item-title { font-size: .9em; font-weight: 600; color: #1a1a1a; flex: 1; }
+  .item-desc {
+    font-size: .82em; color: #555; margin-top: 4px; line-height: 1.5;
+    display: none; padding-left: 17px;
+  }
+  .update-item.expanded .item-desc { display: block; }
+  .item-status-lbl {
+    font-size: .7em; font-weight: 700; padding: 1px 7px; border-radius: 10px;
+    flex-shrink: 0; margin-top: 2px;
+  }
+  .lbl-ga  { background: #e6f4e6; color: #107c10; }
+  .lbl-pre { background: #f0ebf8; color: #8764b8; }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.45); z-index: 999;
+    align-items: center; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: white; border-radius: 16px; padding: 32px;
+    max-width: 560px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,.25);
+    position: relative; animation: popIn .2s ease;
+  }
+  @keyframes popIn { from { transform: scale(.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .modal-close {
+    position: absolute; top: 14px; right: 16px; font-size: 1.4em;
+    cursor: pointer; color: #888; background: none; border: none; line-height: 1;
+  }
+  .modal-close:hover { color: #222; }
+  .modal-area { font-size: .78em; font-weight: 600; text-transform: uppercase;
+    letter-spacing: .06em; color: #0f6cbd; margin-bottom: 6px; }
+  .modal-title { font-size: 1.25em; font-weight: 700; margin-bottom: 12px; line-height: 1.4; }
+  .modal-status { display: inline-block; border-radius: 20px; padding: 4px 14px;
+    font-size: .85em; font-weight: 700; margin-bottom: 16px; }
+  .modal-desc { font-size: .95em; color: #333; line-height: 1.7; margin-bottom: 20px; }
+  .modal-link { display: inline-block; background: #0f6cbd; color: white;
+    padding: 9px 20px; border-radius: 8px; text-decoration: none; font-size: .9em;
+    transition: background .2s; }
+  .modal-link:hover { background: #0078d4; }
+
+  /* ── EMPTY STATE ── */
+  .empty { text-align: center; color: #888; padding: 48px 20px; font-size: 1em; display: none; }
+  .empty span { font-size: 2.5em; display: block; margin-bottom: 10px; }
+
+  /* ── EXPAND ALL ── */
+  .expand-all-btn {
+    padding: 9px 18px; border: 1.5px solid #0f6cbd; border-radius: 8px;
+    background: white; color: #0f6cbd; cursor: pointer; font-size: .9em;
+    transition: all .2s;
+  }
+  .expand-all-btn:hover { background: #0f6cbd; color: white; }
+
+  footer { text-align: center; padding: 24px; font-size: .82em; color: #999; }
+  footer a { color: #0f6cbd; }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <h1>🚀 FabCon 2026 — Microsoft Fabric Updates</h1>
+  <p>March 2026 Feature Summary · <a href="https://blog.fabric.microsoft.com/en-us/blog/fabric-march-2026-feature-summary" target="_blank">Official Blog Post ↗</a></p>
+  <div class="kpi-strip">
+    <div class="kpi active-all" onclick="filterStatus('all')" id="kpi-all">
+      <div class="num" id="kpiTotal">0</div><div class="lbl">Total Updates</div>
+    </div>
+    <div class="kpi" onclick="filterStatus('GA')" id="kpi-ga">
+      <div class="num" id="kpiGA">0</div><div class="lbl">Generally Available ✅</div>
+    </div>
+    <div class="kpi" onclick="filterStatus('Preview')" id="kpi-pre">
+      <div class="num" id="kpiPre">0</div><div class="lbl">Public Preview 🔬</div>
+    </div>
+    <div class="kpi" id="kpi-cat" style="cursor:default">
+      <div class="num" id="kpiCat">0</div><div class="lbl">Feature Areas 📂</div>
+    </div>
+  </div>
+</div>
+
+<!-- CONTROLS -->
+<div class="controls" style="max-width:1200px; margin:20px auto 0; padding:0 20px;">
+  <input class="search-box" id="searchBox" placeholder="🔍  Search updates…" oninput="applyFilters()">
+  <button class="filter-btn active-all" id="btn-all"     onclick="filterStatus('all')"    >All</button>
+  <button class="filter-btn"            id="btn-ga"      onclick="filterStatus('GA')"     >✅ GA Only</button>
+  <button class="filter-btn"            id="btn-pre"     onclick="filterStatus('Preview')">🔬 Preview Only</button>
+  <button class="expand-all-btn"        id="expandAllBtn" onclick="toggleExpandAll()"     >Expand All</button>
+  <span class="result-count" id="resultCount"></span>
+</div>
+
+<!-- GRID -->
+<div class="grid" id="grid"></div>
+<div class="empty" id="emptyState"><span>🔎</span>No updates match your search.</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal" id="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div class="modal-area" id="mArea"></div>
+    <div class="modal-title" id="mTitle"></div>
+    <div class="modal-status" id="mStatus"></div>
+    <div class="modal-desc" id="mDesc"></div>
+    <a class="modal-link" href="https://blog.fabric.microsoft.com/en-us/blog/fabric-march-2026-feature-summary" target="_blank">Read full announcement ↗</a>
+  </div>
+</div>
+
+<footer>
+  Source: <a href="https://blog.fabric.microsoft.com/en-us/blog/fabric-march-2026-feature-summary" target="_blank">Fabric March 2026 Feature Summary</a> &nbsp;·&nbsp;
+  FabCon Europe: Barcelona, September 28 – October 1, 2026
+</footer>
+
+<script>
+const UPDATES = [
+  // Fabric Platform
+  {cat:"Fabric Platform",icon:"🏗️",status:"GA",     title:"OneLake Catalog Govern for admins",                        desc:"Tools for Fabric admins to govern and secure data estates in OneLake Catalog in one place — visibility, control, and policy enforcement at scale."},
+  {cat:"Fabric Platform",icon:"🏗️",status:"Preview", title:"OneLake Catalog search API and MCP tool",                 desc:"Cross-workspace item discovery via a single search API. Also available as a built-in tool in the Fabric Core MCP server so AI agents can reliably locate the right Fabric asset."},
+  {cat:"Fabric Platform",icon:"🏗️",status:"GA",     title:"Workspace tags",                                           desc:"Add team, project, or cost-centre metadata tags at the workspace level. Filterable in the Workspaces list and OneLake Catalog Explorer. Manageable at scale via APIs."},
+  {cat:"Fabric Platform",icon:"🏗️",status:"Preview", title:"DLP Restrict Access — Warehouses, KQL, SQL DBs",          desc:"Data Loss Prevention policies now extend restrict access to Warehouses, KQL databases, SQL databases (plus existing Lakehouses and Semantic Models)."},
+  {cat:"Fabric Platform",icon:"🏗️",status:"GA",     title:"Lakehouse Signals in IRM",                                 desc:"Fabric Lakehouse signals integrated into Microsoft Purview Insider Risk Management. Detect and investigate risky data activity in OneLake with greater precision."},
+  {cat:"Fabric Platform",icon:"🏗️",status:"GA",     title:"Quick policy for data theft (Fabric)",                    desc:"Streamlined Insider Risk Management quick-policy setup to protect against Fabric data exfiltration — faster time to protection for security teams."},
+  {cat:"Fabric Platform",icon:"🏗️",status:"GA",     title:"IRM PAYG Usage Report",                                   desc:"Transparency report showing pay-as-you-go Insider Risk Management processing units billed across Fabric workloads, sub-workloads, and indicators."},
+  {cat:"Fabric Platform",icon:"🏗️",status:"Preview", title:"Purview DSPM for AI — Fabric Copilots & Agents",          desc:"Data Security Posture Management for AI: visibility and governance over Fabric Copilot and data agent interactions. Spot sensitive data risks in prompts and responses."},
+  {cat:"Fabric Platform",icon:"🏗️",status:"Preview", title:"Branched workspace with Git integration",                 desc:"Clearer visual cues and richer context when branching workspaces in Git. Developers can easily understand workspace relationships and iterate on features with confidence."},
+  {cat:"Fabric Platform",icon:"🏗️",status:"Preview", title:"Selective branching with Git integration",                desc:"Choose only the items you need for a feature when branching out — reducing workspace clutter, improving reliability, and accelerating time-to-code."},
+  {cat:"Fabric Platform",icon:"🏗️",status:"Preview", title:"Compare code changes with Git integration",               desc:"Side-by-side code compare at the item and file level showing exact differences since last sync. Makes it easier to review, understand impact, and resolve conflicts before committing."},
+  {cat:"Fabric Platform",icon:"🏗️",status:"Preview", title:"Connection reference in Variable Library",                desc:"New variable type to reference existing connections (Azure SQL, Snowflake, etc.) by connection ID — no embedded static connection strings, works seamlessly with CI/CD."},
+  {cat:"Fabric Platform",icon:"🏗️",status:"Preview", title:"Bulk import/export items definition APIs",               desc:"Programmatically export, import, and sync Fabric item definitions (Notebooks, Reports, Pipelines, Semantic Models) across workspaces at scale via the Fabric REST API."},
+  {cat:"Fabric Platform",icon:"🏗️",status:"GA",     title:"Fabric CLI v1.5",                                          desc:"Power BI scenarios (semantic model refresh, report rebind), CI/CD deploy command, interactive REPL, JMESPath filtering, notebook export, Python 3.13 support, and community-contributed improvements."},
+  {cat:"Fabric Platform",icon:"🏗️",status:"Preview", title:"Fabric Remote MCP Server",                               desc:"Cloud-hosted MCP server so AI agents can perform real operations in your Fabric environment — create workspaces, manage permissions, work with item definitions — via Entra ID auth."},
+  {cat:"Fabric Platform",icon:"🏗️",status:"GA",     title:"Fabric Local MCP (AI code assistants)",                   desc:"Open-source local MCP server with integrated authentication, automatic retry, production SLAs, and telemetry. Install via npx @microsoft/fabric-mcp in any MCP-compatible client."},
+  // Extensibility
+  {cat:"Extensibility",  icon:"🔌",status:"GA",     title:"Fabric Extensibility",                                     desc:"Build, validate, and publish custom Fabric workloads to production with full Microsoft support. Stable core capabilities: OneLake storage, native item lifecycle, Entra token acquisition, iFrame relaxation."},
+  {cat:"Extensibility",  icon:"🔌",status:"Preview", title:"Extensibility CI/CD & remote support",                   desc:"CI/CD for workload items (Git integration + Deployment Pipelines), Variable Library support, Remote Lifecycle Notification API, and Fabric Scheduler for scheduled backend jobs."},
+  {cat:"Extensibility",  icon:"🔌",status:"GA",     title:"Workload admin portal (Manage Workloads tab)",             desc:"A single pane of glass for workload governance — view all workloads available in your tenant, their status, and manage tenant/workspace-level assignments."},
+  {cat:"Extensibility",  icon:"🔌",status:"GA",     title:"Add workload to workspace (self-service)",                 desc:"Workspace admins can add workloads directly to one or more workspaces from the Workload Hub without needing IT involvement — with immediate availability."},
+  {cat:"Extensibility",  icon:"🔌",status:"Preview", title:"Workload Management Admin APIs",                          desc:"REST APIs for listing all workloads, viewing assignments (tenant/workspace/capacity), and managing workload assignments at scale programmatically."},
+  {cat:"Extensibility",  icon:"🔌",status:"GA",     title:"Self-service workload publishing",                         desc:"ISV partners can publish workloads to up to 20 customer tenants for private preview without a manual Microsoft submission. Includes workload name reservation and automated validation."},
+  // OneLake
+  {cat:"OneLake",        icon:"🏔️",status:"GA",     title:"Third-party support for OneLake security",                desc:"Authorized third-party engines can enforce row-level and column-level security defined in OneLake. Security defined once in OneLake, enforced everywhere — engine-agnostic."},
+  {cat:"OneLake",        icon:"🏔️",status:"GA",     title:"OneLake file explorer",                                   desc:"Browse, upload, download, and edit all OneLake data from Windows using a familiar OneDrive-style experience. Every workspace and data asset accessible from the Windows file system."},
+  // Data Engineering
+  {cat:"Data Engineering",icon:"⚙️",status:"Preview", title:"Fabric Runtime 2.0",                                    desc:"Apache Spark 4.0, Java 21, Scala 2.13, Python 3.12, Delta Lake 4.0, Azure Linux 3.0 (Mariner 3.0). A next-generation runtime purpose-built for large-scale data computations."},
+  {cat:"Data Engineering",icon:"⚙️",status:"GA",    title:"Custom Live Pools",                                        desc:"Dedicated, long-lived Spark pools that stay warm inside your network boundary, pre-configured with required dependencies — eliminating repeated cluster spin-up and library install delays."},
+  {cat:"Data Engineering",icon:"⚙️",status:"GA",    title:"Job concurrency & queue monitoring",                       desc:"View active, queued, and completed Spark jobs in a single view. Understand why jobs are queued, how concurrency limits apply, and identify bottlenecks caused by capacity constraints."},
+  {cat:"Data Engineering",icon:"⚙️",status:"GA",    title:"Resource Profiles (AI-recommended Spark config)",          desc:"Describe your workload (use case, data volume, CU limit) and Fabric automatically generates an optimised Spark configuration — node family, autoscale, executor settings, and runtime version."},
+  {cat:"Data Engineering",icon:"⚙️",status:"Preview", title:"Quick mode for library installation",                   desc:"On-demand library installation during development without triggering a full environment publish. Keep production libraries in full/snapshot mode, test new packages in quick mode — side by side."},
+  {cat:"Data Engineering",icon:"⚙️",status:"GA",    title:"High Concurrency session sharing up to 50",               desc:"Increase the maximum notebooks attached to a High Concurrency session from 5 up to 50 with spark.highConcurrency.max — improving session density and price-performance at scale."},
+  {cat:"Data Engineering",icon:"⚙️",status:"GA",    title:"Data export settings for notebooks",                      desc:"Admins can block notebook file downloads and disable rich output (DataFrame table results) downloads from the notebook experience at the tenant level — preventing unintended data exfiltration."},
+  {cat:"Data Engineering",icon:"⚙️",status:"GA",    title:"Session start insights",                                  desc:"Transparent session startup diagnostics: whether a Starter Pool or on-demand cluster was used, the exact reason fast-path was not used, and where time was spent during acquisition."},
+  {cat:"Data Engineering",icon:"⚙️",status:"GA",    title:"Z-order & liquid clustering in Native Execution Engine",  desc:"20–32 second absolute runtime reduction and ~20–27% improvement across clustered column combinations. Storage-level optimisation and execution-level acceleration working together."},
+  {cat:"Data Engineering",icon:"⚙️",status:"GA",    title:"Copilot for Data Engineering & Data Science",             desc:"Context-aware Copilot in notebooks: code generation, explain logic, propose a plan, and Fix-with-Copilot directly below failed cells — no session startup required to start chatting."},
+  {cat:"Data Engineering",icon:"⚙️",status:"GA",    title:"Fabric notebook custom agent in VS Code",                 desc:"Fabric-native AI development agent in the VS Code extension. Understands workspace, runtime, environments, and Lakehouse resources. Generates context-aware, validated code for Fabric."},
+  {cat:"Data Engineering",icon:"⚙️",status:"GA",    title:"Tenant switching in VS Code extension",                   desc:"Switch between different customer Fabric tenants from the VS Code status bar — without repeated sign-in. Designed for ISVs and partners managing multiple customer projects."},
+  {cat:"Data Engineering",icon:"⚙️",status:"GA",    title:"New kernels in VS Code (Python, Scala, Spark SQL)",        desc:"Select Python, PySpark, Scala, or Spark SQL as the kernel-level language — no cell magic commands needed. Run Fabric notebooks natively in VS Code with the right language at the kernel level."},
+  {cat:"Data Engineering",icon:"⚙️",status:"GA",    title:"Multiple schedules for materialized lake views",          desc:"Name independent schedules per lakehouse. Finance can refresh hourly while analytics refreshes every 6h — with dependency management, parallel execution, and centralised error reporting."},
+  {cat:"Data Engineering",icon:"⚙️",status:"Preview", title:"PySpark support for materialized lake views",           desc:"Author materialized lake views using the PySpark DataFrameWriter API. Gives MLVs access to the full Python ecosystem — UDFs, ML models, geocoding libraries, and custom business rules."},
+  {cat:"Data Engineering",icon:"⚙️",status:"GA",    title:"Copy Job in Lakehouse Get Data",                          desc:"Copy Job appears at the top of the Get Data experience in Lakehouse, making it the most discoverable first step for bringing data into Fabric with minimal setup."},
+  {cat:"Data Engineering",icon:"⚙️",status:"GA",    title:"Notebook lakehouse auto-binding in Git",                  desc:"Notebooks automatically resolve the correct lakehouse as they move across Git-connected workspaces (dev/test/prod) — reducing manual rebinding and environment-specific fixes."},
+  {cat:"Data Engineering",icon:"⚙️",status:"GA",    title:"Notebook Resources Folder in Git",                        desc:"Commit the built-in Resources folder (Python modules, config files, assets) to Git alongside notebook code. Fine-grained .gitignore controls to avoid tracking large or generated files."},
+  {cat:"Data Engineering",icon:"⚙️",status:"GA",    title:"Notebook public APIs",                                    desc:"Full CRUD + on-demand execution with parameterisation, custom session config, lakehouse/environment selection, execution status monitoring, cancel runs, exit values for pipeline branching."},
+  {cat:"Data Engineering",icon:"⚙️",status:"GA",    title:"Improved Copilot completion for notebooks",               desc:"VS Code-style inline suggestions — faster responses, higher-quality context-aware completions that fit notebook workflows for Python and PySpark. Enabled from the notebook status bar."},
+  {cat:"Data Engineering",icon:"⚙️",status:"GA",    title:"Create files in notebook Resources folder",               desc:"Create and edit Python modules, config files, and lightweight assets directly in the built-in Resources folder without leaving the notebook environment."},
+  // Data Science & AI
+  {cat:"Data Science & AI",icon:"🤖",status:"GA",   title:"Fabric data agents",                                       desc:"Build and share natural-language data agents over Lakehouse, Warehouse, Eventhouse, SQL database, semantic models, and mirrored databases. Publish, share, and add to the ALM lifecycle."},
+  {cat:"Data Science & AI",icon:"🤖",status:"Preview", title:"Advanced security & governance in data agents",        desc:"Purview integration: comprehensive auditing, eDiscovery, data lifecycle management, communications compliance, and classification for all data agent prompt and response telemetry."},
+  {cat:"Data Science & AI",icon:"🤖",status:"Preview", title:"Data agent enhancements (Graph, KQL/SQL UDFs)",         desc:"Connect Graph as a data source for complex relationship analytics. Support for KQL user-defined functions and SQL functions for more sophisticated querying in data agents."},
+  {cat:"Data Science & AI",icon:"🤖",status:"GA",   title:"Multimodal AI functions for notebooks",                   desc:"Apply AI to PDFs, images, and text files directly in notebooks — summarisation, classification, sentiment analysis, and more. Works across pandas and Spark with just a few lines of code."},
+  {cat:"Data Science & AI",icon:"🤖",status:"GA",   title:"AutoML in Fabric",                                         desc:"Production-ready, low-code ML: automated model selection, feature engineering, and hyperparameter optimisation (FLAML). Full integrated UI for configuring experiments, comparing models, and deploying."},
+  // Data Warehouse
+  {cat:"Data Warehouse",  icon:"🏛️",status:"Preview", title:"Data Warehouse recovery (dropped warehouse restore)",  desc:"Restore a dropped warehouse — data, schemas, permissions, saved queries, and snapshots — from the Recycle Bin in minutes. No rebuilds, re-ingestion, or complex restore workflows."},
+  {cat:"Data Warehouse",  icon:"🏛️",status:"GA",     title:"Alerts and actions on SQL query results",               desc:"Define Fabric Activator rules directly on SQL query outputs. SQL queries that detect SLA risks, failed processes, or threshold breaches can trigger real-time alerts and downstream actions automatically."},
+  {cat:"Data Warehouse",  icon:"🏛️",status:"Preview", title:"T-SQL AI functions (sentiment, classification, summarisation)", desc:"Built-in AI functions for unstructured text: extract structured insights, analyse sentiment, classify content, summarise, correct grammar, translate — all in familiar T-SQL syntax."},
+  {cat:"Data Warehouse",  icon:"🏛️",status:"GA",     title:"ANY_VALUE() aggregate",                                 desc:"Return an arbitrary value from a group without adding descriptive columns to GROUP BY. Keeps grouping logic minimal and readable — ideal when attributes are functionally constant per group."},
+  {cat:"Data Warehouse",  icon:"🏛️",status:"Preview", title:"Custom SQL pools",                                      desc:"Create multiple isolated SQL pools within a single workspace and allocate a % of compute to each. Ensures critical reporting workloads aren't impacted by ad-hoc queries or background processing."},
+  {cat:"Data Warehouse",  icon:"🏛️",status:"GA",     title:"SQL Audit Logs",                                        desc:"SQL Analytics Endpoint auditing, direct access to audit files in OneLake Explorer, download/copy audit files, and open .xel files in SSMS for forensic investigation."},
+  {cat:"Data Warehouse",  icon:"🏛️",status:"GA",     title:"COPY INTO & OPENROWSET for all OneLake sources",        desc:"Ingest from any OneLake-backed item (not just Lakehouses) using COPY INTO or OPENROWSET — enabling flexible staging patterns across the entire Fabric workspace."},
+  {cat:"Data Warehouse",  icon:"🏛️",status:"GA",     title:"Outbound Access Protection (OAP) for Warehouse",       desc:"Connector rules restricting which external sources a warehouse can access — specific ADLS Gen2 accounts, other Fabric workspaces, or approved external connectors."},
+  {cat:"Data Warehouse",  icon:"🏛️",status:"GA",     title:"Full query text in Query Insights (no 8k truncation)",  desc:"Complete SQL statement preserved in exec_requests_history and the Query Details pane. Easily understand exactly what ran, compare query text across executions, correlate performance issues."},
+  {cat:"Data Warehouse",  icon:"🏛️",status:"Preview", title:"Live connectivity in Migration Assistant for DW",      desc:"Migrate object metadata by connecting directly to your source system (SQL Server / Azure SQL) — no DACPAC required. Schemas, tables, views, functions, and procedures migrated directly."},
+  {cat:"Data Warehouse",  icon:"🏛️",status:"GA",     title:"External data sources for OPENROWSET",                  desc:"Named references to lake locations via CREATE EXTERNAL DATA SOURCE. Write clean relative paths (e.g. /Files/bronze/logs/*.jsonl) instead of long, environment-specific URLs."},
+  // Real-Time Intelligence
+  {cat:"Real-Time Intelligence",icon:"⚡",status:"Preview", title:"Business Events in Fabric",                       desc:"Generate business events from UDFs and notebooks. One event triggers: Activator alerts, custom logic via UDFs, notebook analytics, AI/ML enrichment, Spark jobs, and Power Automate workflows."},
+  {cat:"Real-Time Intelligence",icon:"⚡",status:"Preview", title:"Eventstreams DeltaFlow (CDC from databases)",      desc:"Capture inserts, updates, and deletes from operational databases; transform raw Debezium CDC feeds into analytics-ready form; auto-manage Eventhouse table schemas as source evolves."},
+  {cat:"Real-Time Intelligence",icon:"⚡",status:"Preview", title:"Eventstreams + Spark Structured Streaming",        desc:"Discover Eventstreams from Real-Time Hub directly inside Fabric notebooks. Auto-generated PySpark code snippets. Load existing notebooks from the Eventstreams portal as destinations."},
+  {cat:"Real-Time Intelligence",icon:"⚡",status:"GA",     title:"Anomaly Detector full-item experience",            desc:"Refreshed Anomaly Detector as a full-page canvas — configuration, analysis, and results in one place. Clearer setup flow, iterate and compare outcomes without losing context."},
+  {cat:"Real-Time Intelligence",icon:"⚡",status:"GA",     title:"Operations agent playbook improvements",           desc:"Better field mapping, more rule types (string comparison, counting over time), clearer failure messages to help you debug playbook configuration issues faster."},
+  {cat:"Real-Time Intelligence",icon:"⚡",status:"GA",     title:"Live update for Real-Time Dashboards",             desc:"Event-driven dashboard refresh: triggers only when new data arrives, not on a fixed polling interval. Reduces compute overhead. Viewers can pause live updates during investigation."},
+  {cat:"Real-Time Intelligence",icon:"⚡",status:"GA",     title:"Eventstream SQL Operator",                         desc:"Write to multiple destinations from a single SQL block. Configure event ordering policies and late-event arrival handling for resilient, production-grade real-time pipelines."},
+  {cat:"Real-Time Intelligence",icon:"⚡",status:"GA",     title:"Anomaly Detection as source in Eventstream",       desc:"Add Anomaly Detection as a source in Fabric Eventstream. Route anomaly events for enrichment, downstream alerting, and dashboard visualisation — from Eventstream or Real-Time Hub."},
+  {cat:"Real-Time Intelligence",icon:"⚡",status:"GA",     title:"Data series colors for real-time dashboards",      desc:"Manually assign specific colors per data series in real-time dashboard visuals — so 'Critical' is always red and 'Healthy' is always green, communicating meaning instantly."},
+  {cat:"Real-Time Intelligence",icon:"⚡",status:"Preview", title:"Copilot for real-time dashboard visuals",          desc:"Natural language visual creation in Real-Time Dashboards. Describe the insight you need, and Copilot generates the KQL query, retrieves data, and suggests the right visual type."},
+  {cat:"Real-Time Intelligence",icon:"⚡",status:"Preview", title:"Preview functions in Eventhouse (no-code)",         desc:"View function definitions, run functions, and instantly preview results — with no manual KQL, no parameter guesswork. Browse all stored functions with search and sorting."},
+  {cat:"Real-Time Intelligence",icon:"⚡",status:"Preview", title:"Workspace monitoring dashboard templates (Eventhouse)", desc:"Ready-to-use real-time dashboard templates for Eventhouse monitoring (ingestion, commands, queries, metrics) and Semantic Model monitoring — created directly from Workspace Monitoring Eventhouse."},
+  // Databases
+  {cat:"Databases",      icon:"🗄️",status:"Preview", title:"Database Hub in Fabric",                                 desc:"Unified database management across edge, on-premises, cloud, and Fabric. Agent-assisted intelligence surfaces what changed, explains why it matters, and guides teams toward the right next actions."},
+  {cat:"Databases",      icon:"🗄️",status:"Preview", title:"SQL database — Migration Assistant",                     desc:"Guided migration: import SQL Server/Azure SQL schemas, assess compatibility, and migrate with minimal manual effort. No DACPAC required — connect directly to source."},
+  {cat:"Databases",      icon:"🗄️",status:"GA",     title:"SQL database — configurable autonomous management",      desc:"Control vCore scaling, expanded compatibility levels, enhanced T-SQL features, and settings that ease application transitions — without changing application code."},
+  {cat:"Databases",      icon:"🗄️",status:"GA",     title:"SQL database — all collations supported",               desc:"All Azure SQL Database collations supported when creating a new SQL database in Fabric — for multilingual content management and enhanced global data compatibility."},
+  {cat:"Databases",      icon:"🗄️",status:"GA",     title:"SQL database — Customer Managed Keys & Auditing",        desc:"CMK via Azure Key Vault for full control over key ownership, access, rotation, and compliance. SQL Audit Logs for capturing and analysing database activity — both now GA."},
+  {cat:"Databases",      icon:"🗄️",status:"GA",     title:"SQL database — vector search (DiskANN) + AI Foundry",   desc:"DiskANN-based vector search and Azure AI Foundry integration for advanced semantic search and AI scenarios, alongside workspace performance dashboards for unified SQL database monitoring."},
+  {cat:"Databases",      icon:"🗄️",status:"GA",     title:"SQL database — point-in-time restore (1-35 days)",      desc:"Configurable 1–35 day backup retention. Restore the database to any point in time within the restorable period — even after hard-deletion from the Recycle Bin."},
+  {cat:"Databases",      icon:"🗄️",status:"GA",     title:"Cosmos DB mirroring with Private Link & VNET",           desc:"Mirror data from privately secured Azure Cosmos DB accounts into OneLake. Maintain consistent network security while supporting near-real-time analytics and AI workloads."},
+  // Data Factory
+  {cat:"Data Factory",   icon:"🏭",status:"GA",     title:"Copy Job CDC — Oracle, Fabric DW, SCD Type 2",           desc:"Oracle CDC source, Fabric Data Warehouse sink, and SCD Type 2 (valid dating + soft deletes) built in. Preserve full history for point-in-time queries and regulatory audits — no custom MERGE logic."},
+  {cat:"Data Factory",   icon:"🏭",status:"GA",     title:"Copy Job audit columns (every row traceable)",           desc:"Auto-append extraction time, file path, workspace ID, job ID, run ID, job name, incremental bounds, and custom values to every row — without code or expression authoring."},
+  {cat:"Data Factory",   icon:"🏭",status:"Preview", title:"Copy Job workspace monitoring",                         desc:"Centralized log-level observability for all Copy job runs across a workspace. Analyse failures, throughput, duration, and data volumes across all Copy jobs in one place."},
+  {cat:"Data Factory",   icon:"🏭",status:"GA",     title:"Copy Job AutoPartitioning",                              desc:"Automatically detects large datasets and applies an optimal parallel read strategy — no manual configuration. Adapts dynamically based on data size and source characteristics."},
+  {cat:"Data Factory",   icon:"🏭",status:"GA",     title:"Copy Job zero CU on no-change incremental runs",         desc:"When an incremental run detects no changed data from a supported database, the run consumes zero Fabric Capacity Units. Schedule freely without paying for idle runs."},
+  {cat:"Data Factory",   icon:"🏭",status:"GA",     title:"Copy Job — ROWVERSION, Date, String watermark types",    desc:"New watermark column types (ROWVERSION, Date, String-as-datetime) for more flexible, reliable incremental copy across diverse enterprise source systems."},
+  {cat:"Data Factory",   icon:"🏭",status:"GA",     title:"Dataflow Gen2 Preview-only steps",                       desc:"Run specific transformations only during data preview, not at refresh. Exclude heavy preview-time logic from production execution — faster authoring, no runtime impact."},
+  {cat:"Data Factory",   icon:"🏭",status:"GA",     title:"Dataflow Gen2 Variable Library integration",             desc:"No-code variable referencing inside dialogs. Unlimited variables (removed 50-var limit). See how variables resolve in the Power Query editor with default value support."},
+  {cat:"Data Factory",   icon:"🏭",status:"GA",     title:"Dataflow Gen2 ADLS Gen2 destination",                    desc:"Land curated Dataflow Gen2 outputs directly into Azure Data Lake Storage Gen2 — enabling lake-first ingestion patterns for organisations treating ADLS as their system of record."},
+  {cat:"Data Factory",   icon:"🏭",status:"GA",     title:"Dataflow Gen2 Lakehouse Files destination",              desc:"Write Dataflow outputs into the Files area of a Fabric Lakehouse — for downstream Spark notebooks, pipelines, or external tools expecting file-based outputs."},
+  {cat:"Data Factory",   icon:"🏭",status:"Preview", title:"Dataflow Gen2 Snowflake destination",                   desc:"Publish transformed outputs directly into Snowflake databases from Fabric — supporting hybrid data estates where Fabric handles transformation but Snowflake is the analytics target."},
+  {cat:"Data Factory",   icon:"🏭",status:"Preview", title:"Dataflow Gen2 Excel file destination",                  desc:"Write Dataflow outputs as Excel files to SharePoint or ADLS Gen2 — keeping transformation logic centralised in Fabric while supporting business processes that rely on Excel."},
+  {cat:"Data Factory",   icon:"🏭",status:"GA",     title:"Dataflow Gen2 Schema support in destinations",           desc:"Write into specific schemas (GA for Fabric SQL DB, Lakehouses, Warehouses). Organise tables by domain without creating separate destinations — cleaner multi-team shared environments."},
+  {cat:"Data Factory",   icon:"🏭",status:"GA",     title:"Dataflow Gen2 AI Prompt Transform",                      desc:"Enrich and transform data using natural language prompts inline in Power Query — no ML model management required. Now metered under the 'AI Functions' billing meter."},
+  {cat:"Data Factory",   icon:"🏭",status:"GA",     title:"Dataflow Gen2 parallelised publish validations",          desc:"Faster publish operations through parallel query validation execution. Surface issues earlier and reduce idle time — especially valuable for large dataflows with many destinations."},
+  {cat:"Data Factory",   icon:"🏭",status:"GA",     title:"Dataflow Gen2 Save As — refresh policies & public API",  desc:"Retain scheduled refresh policies when copying a Gen1 dataflow. New public Save As API for bulk/automated Gen1 → Gen2 migration at enterprise scale."},
+  {cat:"Data Factory",   icon:"🏭",status:"Preview", title:"Dataflow Gen2 SharePoint site picker",                  desc:"Browse and select SharePoint sites from a dropdown (Recent + Favourite sites), with built-in search — eliminating manual URL copy-paste and reducing connection errors."},
+  {cat:"Data Factory",   icon:"🏭",status:"Preview", title:"Dataflow Gen2 diagnostics download",                    desc:"Download logs and diagnostic artifacts for cloud-based and VNET gateway dataflows directly — for diagnosing refresh failures, performance bottlenecks, and connectivity problems."},
+  {cat:"Data Factory",   icon:"🏭",status:"Preview", title:"Dataflow Gen2 Advanced Edit for destinations",           desc:"Edit underlying M logic for destination settings. Enables parameter-driven destinations — switch target schema, table, or file path without rewriting queries."},
+  {cat:"Data Factory",   icon:"🏭",status:"Preview", title:"Dataflow Gen2 destination validations at publish",       desc:"Catch missing permissions, invalid settings, or naming conflicts at publish time, not at runtime. Fewer broken dataflows enter production; shorter feedback loops."},
+  {cat:"Data Factory",   icon:"🏭",status:"Preview", title:"Dataflow Gen2 Evaluate Query API (streaming)",           desc:"On-demand execution of Power Query logic without a full scheduled refresh cycle. For event-driven pipelines, near-real-time scenarios, and faster debugging."},
+  {cat:"Data Factory",   icon:"🏭",status:"Preview", title:"Data Factory MCP",                                       desc:"AI assistants create, test, and deploy Dataflow Gen2 through natural language via MCP. Accessible from VS Code, Claude, ChatGPT, Gemini, or CLI. Open source on GitHub."},
+  {cat:"Data Factory",   icon:"🏭",status:"GA",     title:"IBM Netezza ODBC driver",                                 desc:"New IBM Netezza ODBC driver replacing the embedded Simba driver — customers install the IBM driver independently for continued connectivity and long-term support."},
+  {cat:"Data Factory",   icon:"🏭",status:"GA",     title:"Google BigQuery connector",                               desc:"Updated GBQ connector as the supported, long-term path forward — improving reliability and alignment with evolving security standards."},
+  {cat:"Data Factory",   icon:"🏭",status:"Preview", title:"Lakehouse Maintenance activity in pipelines",            desc:"Automate vacuum, optimise table layouts, and manage storage inside Fabric Data Factory pipelines — scheduled, governed, and repeatable without custom scripts."},
+  {cat:"Data Factory",   icon:"🏭",status:"Preview", title:"Refresh SQL endpoint activity in pipelines",             desc:"Refresh the Lakehouse SQL endpoint on-demand or as part of pipeline orchestration — ensuring downstream BI and reporting consumers always see the latest state."},
+  {cat:"Data Factory",   icon:"🏭",status:"GA",     title:"Generate Pipeline expressions with Copilot",              desc:"Describe the expression you need in natural language and Copilot generates it — dynamic folder paths, conditional logic, string parsing, parameterised values. Now GA."},
+  {cat:"Data Factory",   icon:"🏭",status:"Preview", title:"Workspace monitoring for Pipelines & Copy Job",         desc:"Workspace-wide view of pipeline and copy job run health: filtering, sorting, drilldown, failure patterns, duration trends. New to Fabric Data Factory monitoring."},
+  {cat:"Data Factory",   icon:"🏭",status:"GA",     title:"Interval-based pipeline schedules",                       desc:"Tumbling-window style non-overlapping interval schedules for recurring pipeline runs — similar to the popular tumbling window trigger in Azure Data Factory."},
+  {cat:"Data Factory",   icon:"🏭",status:"GA",     title:"Apache Airflow Copy job & dbt job operators",             desc:"Execute Copy jobs and dbt jobs directly from Apache Airflow DAGs using native Fabric Airflow operators — alongside existing Notebook, Spark, Pipeline, and Semantic Model operators."},
+  {cat:"Data Factory",   icon:"🏭",status:"GA",     title:"Gateway PowerShell module",                               desc:"Fully supported, production-ready PowerShell automation for gateway lifecycle, update, restore, and configuration management — with new version discovery and upgrade control commands."},
+  {cat:"Data Factory",   icon:"🏭",status:"GA",     title:"VNet data gateway cert & proxy support",                  desc:"Enterprise-issued certificates for gateway authentication and proxy routing when direct internet access is restricted — for secure, compliant connectivity in regulated environments."},
+  {cat:"Data Factory",   icon:"🏭",status:"GA",     title:"VNet data gateway — up to 9 instances",                   desc:"Scale VNet data gateway clusters to 9 instances for higher throughput, improved parallel job performance, and enhanced reliability for mission-critical data movement."},
+  {cat:"Data Factory",   icon:"🏭",status:"Preview", title:"SSIS Pipeline Activity",                                 desc:"Execute existing SSIS packages directly from Fabric Data Factory pipelines — no Azure-SSIS Integration Runtime or infrastructure management required. True lift-and-shift for legacy ETL."},
+  {cat:"Data Factory",   icon:"🏭",status:"Preview", title:"ADF/Synapse pipeline migration to Fabric",               desc:"Assessment-first guided migration from Azure Data Factory and Synapse Analytics. Categorises pipelines by readiness, maps linked services to Fabric connections, validates, and promotes."},
+  {cat:"Data Factory",   icon:"🏭",status:"GA",     title:"Mirroring for SAP",                                       desc:"Mirror SAP S/4HANA (on-prem or cloud), ECC, BW, BW/4HANA, SuccessFactors, Ariba, and Concur into OneLake in near real-time via SAP Datasphere Premium Outbound Integration. Now GA."},
+  {cat:"Data Factory",   icon:"🏭",status:"GA",     title:"Mirroring for Oracle",                                    desc:"Production-ready continuous Oracle-to-OneLake replication. No custom ETL pipelines. Near-real-time sync for analytics, BI, and AI workloads. Validated from preview deployments."},
+  {cat:"Data Factory",   icon:"🏭",status:"Preview", title:"Mirroring for Azure Database for MySQL",                 desc:"Near real-time replication from Azure Database for MySQL Flexible Server into Fabric. Managed alongside other mirrored sources for cross-source querying and unified analytics."},
+  {cat:"Data Factory",   icon:"🏭",status:"Preview", title:"Mirroring for SharePoint List",                          desc:"Continuously replicate SharePoint Lists and Document Libraries into OneLake as Delta tables. Changes flow automatically — list columns, document metadata, row updates."},
+  {cat:"Data Factory",   icon:"🏭",status:"Preview", title:"Mirroring — Change Delta Feed & Snowflake Views",        desc:"Incremental CDC (Change Delta Feed) for continuously fresh data without full reloads. Replicate Snowflake views into OneLake preserving source-defined business logic (joins, filters, transforms)."},
+  {cat:"Data Factory",   icon:"🏭",status:"GA",     title:"Mirrored database — 1000 table limit",                    desc:"Mirrored databases now support up to 1000 tables — doubled from the previous 500 limit. Enables mirroring of much larger source database schemas without fragmentation."},
+];
+
+// ── CATEGORY ICONS & COLOURS ──
+const CAT_COLORS = {
+  "Fabric Platform":       "#0f6cbd",
+  "Extensibility":         "#b146c2",
+  "OneLake":               "#0099bc",
+  "Data Engineering":      "#c55a11",
+  "Data Science & AI":     "#107c10",
+  "Data Warehouse":        "#5c2d91",
+  "Real-Time Intelligence":"#d13438",
+  "Databases":             "#005b70",
+  "Data Factory":          "#ca5010",
+};
+
+let activeStatus = "all";
+let expandedAll  = false;
+
+// ── BUILD ──
+function groupByCategory(data) {
+  const map = {};
+  data.forEach(u => {
+    if (!map[u.cat]) map[u.cat] = [];
+    map[u.cat].push(u);
+  });
+  return map;
+}
+
+function applyFilters() {
+  const q    = document.getElementById("searchBox").value.toLowerCase().trim();
+  const grid = document.getElementById("grid");
+  const all  = Array.from(grid.querySelectorAll(".update-item"));
+  let shown  = 0;
+  const cards = Array.from(grid.querySelectorAll(".cat-card"));
+  cards.forEach(card => {
+    const items = Array.from(card.querySelectorAll(".update-item"));
+    let cardVisible = 0;
+    items.forEach(item => {
+      const title = item.dataset.title.toLowerCase();
+      const desc  = item.dataset.desc.toLowerCase();
+      const stat  = item.dataset.status;
+      const matchStatus = (activeStatus === "all") || (stat === activeStatus);
+      const matchQ      = !q || title.includes(q) || desc.includes(q);
+      if (matchStatus && matchQ) { item.style.display = ""; cardVisible++; shown++; }
+      else item.style.display = "none";
+    });
+    card.style.display = cardVisible > 0 ? "" : "none";
+    // Update per-category count
+    const cntEl = card.querySelector(".shown-count");
+    if (cntEl) cntEl.textContent = cardVisible;
+  });
+  document.getElementById("resultCount").textContent =
+    q || activeStatus !== "all" ? `Showing ${shown} updates` : "";
+  document.getElementById("emptyState").style.display = shown === 0 ? "block" : "none";
+}
+
+function filterStatus(s) {
+  activeStatus = s;
+  ["all","ga","pre"].forEach(k => {
+    document.getElementById("btn-" + k).className = "filter-btn";
+    document.getElementById("kpi-" + k).className = "kpi";
+  });
+  const map = {all:"all","GA":"ga","Preview":"pre"};
+  const k   = map[s] || "all";
+  document.getElementById("btn-" + k).className = "filter-btn active-" + k;
+  document.getElementById("kpi-" + k).className = "kpi active-" + k;
+  applyFilters();
+}
+
+function toggleExpandAll() {
+  expandedAll = !expandedAll;
+  document.querySelectorAll(".cat-card").forEach(c => {
+    if (expandedAll) c.classList.add("open");
+    else             c.classList.remove("open");
+  });
+  document.getElementById("expandAllBtn").textContent = expandedAll ? "Collapse All" : "Expand All";
+}
+
+function toggleCard(el) {
+  el.closest(".cat-card").classList.toggle("open");
+}
+
+function toggleItem(el) {
+  el.classList.toggle("expanded");
+}
+
+function openModal(title, desc, cat, status) {
+  document.getElementById("mArea").textContent   = cat;
+  document.getElementById("mTitle").textContent  = title;
+  document.getElementById("mDesc").textContent   = desc;
+  const sl = document.getElementById("mStatus");
+  if (status === "GA") {
+    sl.textContent = "✅ Generally Available";
+    sl.style.cssText = "background:#e6f4e6; color:#107c10; border:1px solid #a8d5a8; border-radius:20px; padding:4px 14px; font-size:.85em; font-weight:700; margin-bottom:16px; display:inline-block;";
+  } else {
+    sl.textContent = "🔬 Public Preview";
+    sl.style.cssText = "background:#f0ebf8; color:#8764b8; border:1px solid #c9b8e8; border-radius:20px; padding:4px 14px; font-size:.85em; font-weight:700; margin-bottom:16px; display:inline-block;";
+  }
+  document.getElementById("modalOverlay").classList.add("open");
+}
+
+function closeModal(e) {
+  if (!e || e.target === document.getElementById("modalOverlay") || e.target.classList.contains("modal-close")) {
+    document.getElementById("modalOverlay").classList.remove("open");
+  }
+}
+
+document.addEventListener("keydown", e => { if (e.key==="Escape") document.getElementById("modalOverlay").classList.remove("open"); });
+
+// ── RENDER ──
+function render() {
+  const cats = groupByCategory(UPDATES);
+  const grid = document.getElementById("grid");
+  grid.innerHTML = "";
+  const catOrder = Object.keys(UPDATES.reduce((a,u)=>{a[u.cat]=1;return a;},{}))
+    .sort((a,b) => {
+      // Sort by total update count descending
+      const ca = UPDATES.filter(u=>u.cat===a).length;
+      const cb = UPDATES.filter(u=>u.cat===b).length;
+      return cb - ca;
+    });
+
+  catOrder.forEach(cat => {
+    const items = cats[cat];
+    if (!items) return;
+    const gaC  = items.filter(i=>i.status==="GA").length;
+    const preC = items.filter(i=>i.status==="Preview").length;
+    const color = CAT_COLORS[cat] || "#0f6cbd";
+    const icon  = items[0].icon;
+
+    const card = document.createElement("div");
+    card.className = "cat-card";
+
+    // header
+    const hdr = document.createElement("div");
+    hdr.className = "cat-header";
+    hdr.style.borderLeft = `5px solid ${color}`;
+    hdr.innerHTML = `
+      <div class="cat-icon">${icon}</div>
+      <div class="cat-title">${cat}</div>
+      <div class="cat-counts">
+        ${gaC  > 0 ? `<span class="badge-ga">${gaC} GA</span>` : ""}
+        ${preC > 0 ? `<span class="badge-pre">${preC} Preview</span>` : ""}
+      </div>
+      <span class="chevron">▼</span>`;
+    hdr.addEventListener("click", () => card.classList.toggle("open"));
+    card.appendChild(hdr);
+
+    // list
+    const list = document.createElement("div");
+    list.className = "update-list";
+    items.forEach(u => {
+      const item = document.createElement("div");
+      item.className = "update-item";
+      item.dataset.title  = u.title;
+      item.dataset.desc   = u.desc;
+      item.dataset.status = u.status;
+      item.innerHTML = `
+        <div class="item-header" onclick="openModal('${u.title.replace(/'/g,"\\'")}','${u.desc.replace(/'/g,"\\'")}','${cat}','${u.status}')">
+          <div class="status-dot ${u.status==='GA'?'dot-ga':'dot-pre'}"></div>
+          <div class="item-title">${u.title}</div>
+          <span class="item-status-lbl ${u.status==='GA'?'lbl-ga':'lbl-pre'}">${u.status}</span>
+        </div>
+        <div class="item-desc">${u.desc}</div>`;
+      // Click title to expand inline; click anywhere to open modal
+      item.querySelector(".item-title").addEventListener("click", (e) => {
+        e.stopPropagation();
+        item.classList.toggle("expanded");
+      });
+      list.appendChild(item);
+    });
+    card.appendChild(list);
+    grid.appendChild(card);
+  });
+
+  // KPI
+  const total = UPDATES.length;
+  const ga    = UPDATES.filter(u=>u.status==="GA").length;
+  const pre   = UPDATES.filter(u=>u.status==="Preview").length;
+  document.getElementById("kpiTotal").textContent = total;
+  document.getElementById("kpiGA").textContent    = ga;
+  document.getElementById("kpiPre").textContent   = pre;
+  document.getElementById("kpiCat").textContent   = Object.keys(cats).length;
+}
+
+render();
+</script>
+</body>
+</html>
